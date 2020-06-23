@@ -96,3 +96,43 @@ DCSync is a variation on credential dumping which can be used to acquire sensiti
 ## Linux
 ### Proc filesystem
 The /proc filesystem on Linux contains a great deal of information regarding the state of the running operating system. Processes running with root privileges can use this facility to scrape live memory of other running programs. If any of these programs store passwords in clear text or password hashes in memory, these values can then be harvested for either usage or brute force attacks, respectively. This functionality has been implemented in the MimiPenguin, an open source tool inspired by Mimikatz. The tool dumps process memory, then harvests passwords and hashes by looking for text strings and regex patterns for how given applications such as Gnome Keyring, sshd, and Apache use memory to store such authentication artifacts.
+
+## Detection
+```
+Event 1
+Sysmon Event ID = 10
+target_process_path = "C:\\Windows\\system32\\lsass.exe" AND
+process_granted_access = [0x1010 OR 0x1410 OR 0x147a OR 0x143a]
+process_call_trace = "C:\\Windows\\SYSTEM32\\ntdll.dll\* OR C:\\Windows\\system32\\KERNELBASE.dll* OR UNKNOWN(*)"
+
+Event 2
+Sysmon Event ID = 12 OR 13 OR 14
+process_path != "C:\\WINDOWS\\system32\\lsass.exe"
+registry_key_path = "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider\\*" OR 
+                    "*\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\*" OR
+                    "*\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SecurityProviders\\*" OR
+                    "*\\Control\\SecurityProviders\\WDigest\\*" AND 
+registry_key_path != "*\\Lsa\\RestrictRemoteSamEventThrottlingWindow"
+
+Event 3
+Sysmon Event ID = 7
+driver_loaded = "C:\\Windows\\System32\\samlib.dll" OR
+                "C:\\Windows\\System32\\WinSCard.dll" OR
+                "C:\\Windows\\System32\\cryptdll.dll" OR
+                "C:\\Windows\\System32\\hid.dll" OR
+                "C:\\Windows\\System32\\vaultcli.dll"
+process_path != "*\\Sysmon.exe" AND process_path!="*\\svchost.exe" AND process_path!="*\\logonui.exe"
+
+Event 4
+Sysmon Event ID = 1
+Windows Security Event ID = 4688
+process_name=reg.exe OR
+process_command_line = "*save*HKLM\\sam*" OR "*save*HKLM\\system*"
+
+Event 5
+Sysmon Event ID = 1
+Windows Security Event ID = 4688
+process_command_line = "*Invoke-Mimikatz -DumpCreds*" OR "gsecdump* -a" OR "wce* -o" OR 
+                       "procdump* -ma lsass.exe*" OR "ntdsutil*ac i ntds*ifm*create full"
+                       
+```
