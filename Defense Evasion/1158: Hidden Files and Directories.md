@@ -4,8 +4,14 @@ To prevent normal users from accidentally changing special files on a system, mo
 
 ## Detection 
 ```
+Event 1
 Sysmon Event ID = 1
 Windows Security Event ID = 4688
 process_name = "attrib.exe" AND
 process_command_line = ["*+h*", "*+s*"]
+
+Event 2
+Sysmon Event ID = 1
+Windows Security Event ID = 4688
+process_path = "*\\VolumeShadowCopy*\\*" OR "*\\VolumeShadowCopy*\\*"
 ```
